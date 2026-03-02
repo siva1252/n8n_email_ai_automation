@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  django_backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.django
+    container_name: django_backend
+    volumes:
+      - ./backend:/app
+      - django_static:/app/staticfiles
+      - django_media:/app/media
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - flask_ai
+
+  flask_ai:
+    build:
+      context: .
+      dockerfile: Dockerfile.flask
+    container_name: flask_ai
+    volumes:
+      - ./flask_ai:/app
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+
+volumes:
+  django_static:
+  django_media:
