@@ -36,14 +36,9 @@ def classify_email():
     data = request.get_json()
     body = data.get("body", "")
 
-    system_instruction = """You are an Expert Business Assistant. Analyze the email below. 
-Determine if it is a Business Collaboration Inquiry (Brand deal, sponsorship, PR, advertising, or collaboration of any kind) or a Personal/Spam email. 
-CRITICAL RULES:
-- Even if the grammar is poor, if they mention "collaboration", "sponsor", "collab", "brand", or "bank", it is USEFUL.
-- Ignore whether it is a snippet or a full body. If the *intent* is a business transaction, it is USEFUL.
-Return JSON in the format: {"category": "useful"} ONLY if it involves a professional negotiation or collaboration request. Return {"category": "spam"} for personal chats, family emails, random newsletters, or pure spam. Always output valid JSON only."""
+    system_instruction = """You are an Expert Business Assistant. Analyze the email below. Determine if it is a Business Collaboration Inquiry (Brand deal, sponsorship, PR) or a Personal/Spam email. Return JSON in the format: {"category": "useful"} ONLY if it involves a professional negotiation, or {"category": "spam"} for personal chats, family emails, or random newsletters. Always output valid JSON only."""
     
-    prompt = f"{system_instruction}\n\nEmail Body/Snippet:\n{body}"
+    prompt = f"{system_instruction}\n\nEmail Body:\n{body}"
     
     try:
         response = classify_model.generate_content(prompt)
