@@ -1,14 +1,14 @@
-# Django Dependencies (Backend)
-Django>=4.2,<5.0
-corsheaders  # For dealing with local API requests if needed
+# Django (backend)
+Django>=6.0
+djangorestframework>=3.16.0
 
-# Flask Dependencies (AI Service)
+# Flask (AI service)
 Flask>=3.0.0
-openai>=1.0.0
+sarvamai>=0.1.0
 
-# General Utilities
+# Shared utilities
 python-dotenv>=1.0.0
 requests>=2.31.0
 
-# Production Server
+# Production server
 gunicorn>=21.2.0

@@ -1,62 +1,94 @@
 from flask import Flask, request, jsonify
 import os
 import json
-from openai import OpenAI
+import re
+from pathlib import Path
+from sarvamai import SarvamAI
 from dotenv import load_dotenv
 
+# Prefer project-root .env (Docker also injects via compose env_file)
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 load_dotenv()
 
 app = Flask(__name__)
 
-# Configure OpenAI
-api_key = os.environ.get("OPENAI_API_KEY")
-client = OpenAI(api_key=api_key)
+api_key = os.environ.get("SARVAM_API_KEY")
+client = SarvamAI(api_subscription_key=api_key) if api_key else None
 
-# The model to use
-MODEL = "gpt-4o-mini"
+# Sarvam chat models: sarvam-30b (faster) or sarvam-105b (stronger)
+MODEL = os.environ.get("SARVAM_MODEL", "sarvam-30b")
 
-# root route
+
+def _extract_json(text: str) -> dict:
+    """Parse JSON from model output, including fenced ```json blocks."""
+    text = (text or "").strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if fence:
+        return json.loads(fence.group(1))
+
+    brace = re.search(r"\{.*\}", text, re.DOTALL)
+    if brace:
+        return json.loads(brace.group(0))
+
+    raise ValueError(f"No JSON object found in model response: {text[:200]}")
+
+
+def _chat(system_instruction: str, user_content: str) -> dict:
+    if not client:
+        raise RuntimeError("SARVAM_API_KEY is not set")
+
+    response = client.chat.completions(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": user_content},
+        ],
+        temperature=0.2,
+    )
+    content = response.choices[0].message.content
+    return _extract_json(content)
+
+
 @app.route("/", methods=["GET"])
 def index():
-    return jsonify({"message": "This is Flask AI Server (OpenAI Edition)"}), 200
+    return jsonify({"message": "This is Flask AI Server (Sarvam Edition)"}), 200
 
-# health check
+
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "Flask AI running with OpenAI"})
+    return jsonify({
+        "status": "Flask AI running with Sarvam",
+        "model": MODEL,
+        "api_key_configured": bool(api_key),
+    })
 
 
-# classify email
 @app.route("/classify_email", methods=["POST"])
 def classify_email():
-    data = request.get_json()
+    data = request.get_json() or {}
     body = data.get("body", "")
 
-    system_instruction = """You are an Expert Business Assistant. Analyze the email below. 
+    system_instruction = """You are an Expert Business Assistant. Analyze the email below.
 
-Your goal is to identify Business Collaboration Inquiries (Brand deals, sponsorships, PR, promotion requests, partnership offers). 
+Your goal is to identify Business Collaboration Inquiries (Brand deals, sponsorships, PR, promotion requests, partnership offers).
 
 Even if the email is short, has spelling errors, or comes from an unknown company, if it mentions "promotion", "collab", "sponsorship", "deal", or "partnership", it should be considered "useful".
 
-Return JSON in the format: 
+Return JSON in the format:
 {
-  "category": "useful", 
+  "category": "useful",
   "reason": "Brief explanation why"
-} 
+}
 
 ONLY use "spam" for obvious newsletters, personal family chats, or random non-business garbage. If in doubt, mark as "useful" so the creator doesn't miss money. Always output valid JSON only."""
-    
+
     try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[
-                {"role": "system", "content": system_instruction},
-                {"role": "user", "content": f"Email Body:\n{body}"}
-            ],
-            response_format={"type": "json_object"}
-        )
-        
-        result = json.loads(response.choices[0].message.content)
+        result = _chat(system_instruction, f"Email Body:\n{body}")
         category = result.get("category", "spam")
         reason = result.get("reason", "No reason provided")
     except Exception as e:
@@ -67,22 +99,21 @@ ONLY use "spam" for obvious newsletters, personal family chats, or random non-bu
     return jsonify({"category": category, "reason": reason})
 
 
-# generate reply
 @app.route("/generate_reply", methods=["POST"])
 def generate_reply():
-    data = request.get_json()
+    data = request.get_json() or {}
     min_price = data.get("min_price", 4000)
     goal_price = data.get("goal_price", 5000)
-    chat_history = data.get("chat_history", []) # Expected list of dicts: {"role": "client"/"ai", "content": "..."}
+    chat_history = data.get("chat_history", [])
     incoming_body = data.get("body", "")
-    action = data.get("action", "negotiate") # "negotiate", "accept", "reject"
+    action = data.get("action", "negotiate")
 
     if action == "accept":
         system_instruction = """You are a Business Manager. The exact terms of the deal have been accepted by the creator. Write a professional, polite email to the brand saying that we accept the deal and are excited to begin our collaboration. Output JSON exactly in this format: {"reply": "...", "decision": "accepted"}"""
     elif action == "reject":
         system_instruction = """You are a Business Manager. The creator has decided to decline the brand's offer. Write a professional, polite email to the brand stating that we do not have the time for this project right now, apologize for the inconvenience, and suggest that we might collaborate on another project in the future. Output JSON exactly in this format: {"reply": "...", "decision": "rejected"}"""
     else:
-        system_instruction = f"""You are a shrewd Business Manager gently but firmly negotiating an email deal on behalf of a creator. 
+        system_instruction = f"""You are a shrewd Business Manager gently but firmly negotiating an email deal on behalf of a creator.
 You negotiate just like a real human.
 Rules:
 - If they offer a low price (e.g. ₹3500), counter-offer high (e.g. ₹5000 or ₹6000).
@@ -93,9 +124,9 @@ Rules:
 Output your response as JSON in this exact format:
 {{
   "reply": "Your negotiation reply text here...",
-  "decision": "negotiating" // or "ready_to_close"
+  "decision": "negotiating"
 }}
-"""
+Valid decision values: "negotiating" or "ready_to_close". Always output valid JSON only."""
 
     history_text = "Chat History:\n"
     for msg in chat_history:
@@ -105,18 +136,12 @@ Output your response as JSON in this exact format:
     history_text += f"Latest Sender Email or Instruction:\n{incoming_body}"
 
     try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[
-                {"role": "system", "content": system_instruction},
-                {"role": "user", "content": history_text}
-            ],
-            response_format={"type": "json_object"}
-        )
-        
-        result = json.loads(response.choices[0].message.content)
+        result = _chat(system_instruction, history_text)
         reply = result.get("reply", "I need some more time to review this offer.")
-        decision = result.get("decision", action if action in ["accept", "reject"] else "negotiating")
+        decision = result.get(
+            "decision",
+            action if action in ["accept", "reject"] else "negotiating",
+        )
     except Exception as e:
         print(f"Reply error: {e}")
         reply = "We are reviewing your inquiry and will get back to you shortly."
@@ -124,7 +149,7 @@ Output your response as JSON in this exact format:
 
     return jsonify({
         "reply": reply.strip(),
-        "decision": decision
+        "decision": decision,
     })
 
 

@@ -26,10 +26,10 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Environment Variables
+# Environment Variables (keep .env.example tracked)
 .env
 .env.local
-.env.*
+.env.*.local
 
 # Python virtual environment
 venv/
@@ -38,21 +38,29 @@ ENV/
 env.bak/
 venv.bak/
 
-# Django stuff
+# Django
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+staticfiles/
+media/
 
-# N8N or temporary data
+# n8n / temporary data
 .n8n/
 n8n_data/
 
-# IDEs
+# IDEs / OS
 .idea/
 .vscode/
 *.swp
 *.swo
+.DS_Store
+Thumbs.db
 
-# Docker
-.dockerignore
+# Test / scratch scripts (do not commit)
+list_models.py
+test_classification.py
+test_openai.py
+verify_ai.py
+verify_ai_robust.py
