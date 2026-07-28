@@ -1,33 +1,29 @@
 from flask import Flask, request, jsonify
 import os
 import json
-import google.generativeai as genai
+from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = Flask(__name__)
 
-# Configure Gemini
-api_key = os.environ.get("GEMINI_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
+# Configure OpenAI
+api_key = os.environ.get("OPENAI_API_KEY")
+client = OpenAI(api_key=api_key)
 
-# Initialize models
-generation_config = {"response_mime_type": "application/json"}
-classify_model = genai.GenerativeModel("gemini-1.5-flash", generation_config=generation_config)
-reply_model = genai.GenerativeModel("gemini-1.5-flash", generation_config=generation_config)
-
+# The model to use
+MODEL = "gpt-4o-mini"
 
 # root route
 @app.route("/", methods=["GET"])
 def index():
-    return jsonify({"message": "This is Flask AI Server"}), 200
+    return jsonify({"message": "This is Flask AI Server (OpenAI Edition)"}), 200
 
 # health check
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "Flask AI running"})
+    return jsonify({"status": "Flask AI running with OpenAI"})
 
 
 # classify email
@@ -36,19 +32,39 @@ def classify_email():
     data = request.get_json()
     body = data.get("body", "")
 
-    system_instruction = """You are an Expert Business Assistant. Analyze the email below. Determine if it is a Business Collaboration Inquiry (Brand deal, sponsorship, PR) or a Personal/Spam email. Return JSON in the format: {"category": "useful"} ONLY if it involves a professional negotiation, or {"category": "spam"} for personal chats, family emails, or random newsletters. Always output valid JSON only."""
-    
-    prompt = f"{system_instruction}\n\nEmail Body:\n{body}"
+    system_instruction = """You are an Expert Business Assistant. Analyze the email below. 
+
+Your goal is to identify Business Collaboration Inquiries (Brand deals, sponsorships, PR, promotion requests, partnership offers). 
+
+Even if the email is short, has spelling errors, or comes from an unknown company, if it mentions "promotion", "collab", "sponsorship", "deal", or "partnership", it should be considered "useful".
+
+Return JSON in the format: 
+{
+  "category": "useful", 
+  "reason": "Brief explanation why"
+} 
+
+ONLY use "spam" for obvious newsletters, personal family chats, or random non-business garbage. If in doubt, mark as "useful" so the creator doesn't miss money. Always output valid JSON only."""
     
     try:
-        response = classify_model.generate_content(prompt)
-        result = json.loads(response.text)
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": f"Email Body:\n{body}"}
+            ],
+            response_format={"type": "json_object"}
+        )
+        
+        result = json.loads(response.choices[0].message.content)
         category = result.get("category", "spam")
+        reason = result.get("reason", "No reason provided")
     except Exception as e:
         print(f"Classification error: {e}")
         category = "spam"
+        reason = f"Error occurred: {str(e)}"
 
-    return jsonify({"category": category})
+    return jsonify({"category": category, "reason": reason})
 
 
 # generate reply
@@ -86,13 +102,19 @@ Output your response as JSON in this exact format:
         role = "Sender" if msg.get("role") == "client" else "Creator (You)"
         history_text += f"{role}: {msg.get('content')}\n\n"
 
-    history_text += f"Latest Sender Email or Instruction:\n{incoming_body}\n\nPlease generate the next reply and determine the status based on the system instructions."
-
-    prompt = f"{system_instruction}\n\n{history_text}"
+    history_text += f"Latest Sender Email or Instruction:\n{incoming_body}"
 
     try:
-        response = reply_model.generate_content(prompt)
-        result = json.loads(response.text)
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {"role": "system", "content": system_instruction},
+                {"role": "user", "content": history_text}
+            ],
+            response_format={"type": "json_object"}
+        )
+        
+        result = json.loads(response.choices[0].message.content)
         reply = result.get("reply", "I need some more time to review this offer.")
         decision = result.get("decision", action if action in ["accept", "reject"] else "negotiating")
     except Exception as e:

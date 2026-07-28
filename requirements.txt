@@ -4,7 +4,7 @@ corsheaders  # For dealing with local API requests if needed
 
 # Flask Dependencies (AI Service)
 Flask>=3.0.0
-google-generativeai>=0.4.0
+openai>=1.0.0
 
 # General Utilities
 python-dotenv>=1.0.0
