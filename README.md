@@ -49,7 +49,8 @@ N8n_email_ai_automation/
 
 ## Docs
 
-- [API documentation](docs/DJANGO_API_DOCUMENTATION.md)
-- [Complete system docs](docs/DJANGO_COMPLETE_DOCUMENTATION.md)
-- [Email negotiation flow](docs/EMAIL_NEGOTIATION_SYSTEM.md)
-- [Dashboard setup](docs/DASHBOARD_SETUP.md)
+**Use this as the full project bible (handoff for an agent):**
+
+- [Full project documentation](PROJECT_DOCUMENTATION.md)
+
+Older notes in `docs/` are stale and may contradict the current code. Prefer `PROJECT_DOCUMENTATION.md`.
