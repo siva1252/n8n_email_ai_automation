@@ -1,0 +1,12 @@
+.git
+__pycache__
+*.pyc
+.env
+*.sqlite3
+INFLUENCER_EMAIL_AI_MASTER_CURSOR_SPEC.docx
+*client_secret*.json
+creditinals.md
+_spec_extracted.txt
+docs
+agent-tools
+data/vector_store

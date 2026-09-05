@@ -64,3 +64,10 @@ test_classification.py
 test_openai.py
 verify_ai.py
 verify_ai_robust.py
+
+creditinals.md
+tmp_n8n/
+*client_secret*.json
+_spec_extracted.txt
+data/vector_store/
+*.sqlite3

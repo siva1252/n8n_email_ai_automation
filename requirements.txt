@@ -1,14 +1,17 @@
-# Django (backend)
-Django>=6.0
-djangorestframework>=3.16.0
+# Django
+Django>=5.1,<7
+djangorestframework>=3.15.0
 
-# Flask (AI service)
+# Flask AI gateway
 Flask>=3.0.0
-sarvamai>=0.1.0
+pydantic>=2.7.0
 
-# Shared utilities
+# Shared
 python-dotenv>=1.0.0
-requests>=2.31.0
+requests>=2.32.0
+gunicorn>=22.0.0
+numpy>=1.26.0
 
-# Production server
-gunicorn>=21.2.0
+# Tests
+pytest>=8.0.0
+pytest-django>=4.8.0

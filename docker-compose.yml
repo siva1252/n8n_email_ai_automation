@@ -1,6 +1,33 @@
-version: '3.8'
+version: "3.8"
 
 services:
+  flask_ai:
+    build:
+      context: .
+      dockerfile: Dockerfile.flask
+    container_name: flask_ai
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./flask_ai:/app
+      - ./rag_data:/rag_data:ro
+      - ./data/vector_store:/data/vector_store
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    environment:
+      RAG_DATA_DIR: /rag_data
+      VECTOR_DB_DIR: /data/vector_store
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      EMBEDDING_BACKEND: tfidf
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health')"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
+
   django_backend:
     build:
       context: .
@@ -8,27 +35,59 @@ services:
     container_name: django_backend
     volumes:
       - ./backend:/app
-      - django_static:/app/staticfiles
-      - django_media:/app/media
+      - ./demo_data:/demo_data:ro
     ports:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      FLASK_AI_URL: http://flask_ai:5000
+      N8N_WEBHOOK_URL: http://n8n:5678/webhook/deal-action
+      N8N_BASE_URL: http://n8n:5678
+      DEMO_DATA_DIR: /demo_data
     depends_on:
-      - flask_ai
+      flask_ai:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/')"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 40s
 
-  flask_ai:
-    build:
-      context: .
-      dockerfile: Dockerfile.flask
-    container_name: flask_ai
-    volumes:
-      - ./flask_ai:/app
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: n8n
     ports:
-      - "5000:5000"
+      - "5678:5678"
     env_file:
       - .env
+    environment:
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/
+      N8N_SECURE_COOKIE: "false"
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      GENERIC_TIMEZONE: Asia/Kolkata
+      TZ: Asia/Kolkata
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "false"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5678/healthz >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+      start_period: 40s
+    depends_on:
+      django_backend:
+        condition: service_healthy
 
 volumes:
-  django_static:
-  django_media:
+  n8n_data:
+    name: n8n_data
