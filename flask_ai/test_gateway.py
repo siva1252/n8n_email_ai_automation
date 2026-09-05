@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from provider_registry import MockProvider, extract_json
 from rag import build_index, retrieve
 from router import complete_json
-from safety import looks_like_injection, reply_is_safe
+from safety import looks_like_injection, polish_outgoing_email, reply_is_safe
 from schemas import ExtractRequest, IntentRequest, SpamRequest
 from spam import classify_spam
 from intent import classify_intent
@@ -63,6 +63,22 @@ def test_injection_detected():
 def test_reply_safety():
     ok, _ = reply_is_safe("Thanks, our package starts around the standard rate.")
     assert ok
+
+
+def test_signature_placeholder_becomes_real_name():
+    out = polish_outgoing_email(
+        "Thank you — we accept this reel collaboration.\n\nBest regards,\n[Creator Name]",
+        "Siva",
+    )
+    assert "[Creator Name]" not in out
+    assert "Best regards" in out
+    assert out.strip().endswith("Siva")
+
+
+def test_signature_added_when_missing():
+    out = polish_outgoing_email("Thanks for the offer. Could you share the brief?", "Siva")
+    assert "Best regards" in out
+    assert out.strip().endswith("Siva")
 
 
 def test_provider_fallback_chain():

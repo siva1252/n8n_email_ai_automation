@@ -119,6 +119,7 @@ N8N_BASE_URL = os.environ.get("N8N_BASE_URL", "http://127.0.0.1:5678")
 INTERNAL_API_KEY = os.environ.get("INTERNAL_API_KEY", "")
 NEGOTIATION_MIN_PRICE = float(os.environ.get("NEGOTIATION_MIN_PRICE", "4000"))
 NEGOTIATION_TARGET_PRICE = float(os.environ.get("NEGOTIATION_TARGET_PRICE", "5000"))
+CREATOR_NAME = (os.environ.get("CREATOR_NAME") or "Siva").strip() or "Siva"
 NEGOTIATION_MAX_ROUNDS = int(os.environ.get("NEGOTIATION_MAX_ROUNDS", "3"))
 DEMO_MODE = _bool("DEMO_MODE", True)
 CSRF_TRUSTED_ORIGINS = ["http://localhost:8000", "http://127.0.0.1:8000"]

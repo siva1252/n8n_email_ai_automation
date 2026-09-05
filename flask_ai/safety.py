@@ -44,6 +44,39 @@ def sanitize_user_content(text: str) -> str:
     return cleaned[:12000]
 
 
+_PLACEHOLDER = re.compile(
+    r"\*{0,2}\[(?:\s*(?:the\s+)?(?:creator|your|my|full|insert)?\s*name\s*)\]\*{0,2}"
+    r"|\{\{\s*creator[_ ]name\s*\}\}"
+    r"|<\s*(?:creator|your)\s*name\s*>",
+    re.I,
+)
+_SIGNOFF = re.compile(r"(best regards|kind regards|warm regards|thanks|thank you)\s*,?\s*$", re.I)
+
+
+def polish_outgoing_email(reply: str, creator_name: str = "") -> str:
+    """Make a sendable email: no [Creator Name] placeholders, real Best regards line."""
+    name = (creator_name or "").strip() or "Siva"
+    text = _PLACEHOLDER.sub(name, reply or "").strip()
+    lines = [ln.rstrip() for ln in text.splitlines()]
+    while lines and not lines[-1].strip():
+        lines.pop()
+    if lines:
+        last = lines[-1].strip()
+        if last.lower() in {"[creator name]", "creator name", "your name", "[your name]", "xxx", "yy"}:
+            lines[-1] = name
+        elif last.startswith("[") and last.endswith("]") and "http" not in last.lower():
+            lines[-1] = name
+    text = "\n".join(lines).strip()
+    lowered = text.lower()
+    if "best regards" in lowered or "kind regards" in lowered or "warm regards" in lowered:
+        # If sign-off is the last line with no name after it, add the name.
+        tail = "\n".join(lines[-2:]).lower() if lines else ""
+        if _SIGNOFF.search((lines[-1] if lines else "")) and name.lower() not in (lines[-1].lower() if lines else ""):
+            text = text.rstrip() + f"\n{name}"
+        return text.strip()
+    return f"{text}\n\nBest regards,\n{name}"
+
+
 def reply_is_safe(reply: str, allowed_numbers: list[float] | None = None) -> tuple[bool, str]:
     text = reply or ""
     lowered = text.lower()

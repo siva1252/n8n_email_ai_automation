@@ -3,8 +3,9 @@ from typing import Any, Optional
 
 from rag import facts_for_prompt
 from router import RouterError, complete_json
-from safety import reply_is_safe, sanitize_user_content
+from safety import polish_outgoing_email, reply_is_safe, sanitize_user_content
 from schemas import NegotiationRequest, NegotiationResult
+from config import CREATOR_NAME
 
 PROMPTS = {
     "negotiate": (Path(__file__).parent / "prompts" / "negotiate_v1.txt").read_text(encoding="utf-8"),
@@ -56,7 +57,8 @@ def negotiate(req: NegotiationRequest, correlation_id: str = "") -> NegotiationR
         role = msg.get("role") or "client"
         history += f"{role}: {msg.get('content')}\n\n"
     user = sanitize_user_content(
-        f"""Subject: {req.subject}
+        f"""Creator sign-off name (use this exact name, never a placeholder): {CREATOR_NAME}
+Subject: {req.subject}
 Min price (internal): {req.min_price}
 Target price (internal): {req.goal_price}
 Negotiation round: {req.negotiation_round}/{req.max_rounds}
@@ -89,7 +91,7 @@ Latest message:
         decision = "READY_TO_CLOSE"
     if decision not in VALID_DECISIONS:
         decision = "HUMAN_REQUIRED"
-    reply = str(parsed.get("reply_body") or parsed.get("reply") or "").strip()
+    reply = polish_outgoing_email(str(parsed.get("reply_body") or parsed.get("reply") or "").strip(), CREATOR_NAME)
     ok, why = reply_is_safe(reply)
     if not ok:
         return NegotiationResult(

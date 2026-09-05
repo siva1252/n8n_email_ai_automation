@@ -14,7 +14,7 @@ from django.views.decorators.http import require_GET, require_http_methods, requ
 
 from .api_auth import require_internal_key
 from .models import Deal, EmailMessage, HumanAction
-from .pipeline import accept_or_reject, ingest_email
+from .pipeline import accept_or_reject, ingest_email, polish_creator_reply
 
 
 def _json_body(request):
@@ -235,7 +235,7 @@ def deal_detail(request, deal_id):
 @require_POST
 def update_ai_reply(request, deal_id):
     deal = get_object_or_404(Deal, id=deal_id)
-    deal.ai_generated_reply = request.POST.get("ai_reply", "").strip()
+    deal.ai_generated_reply = polish_creator_reply(request.POST.get("ai_reply", "").strip())
     deal.save(update_fields=["ai_generated_reply", "updated_at"])
     messages.success(request, "Reply saved")
     return redirect("deal_detail", deal_id=deal.id)

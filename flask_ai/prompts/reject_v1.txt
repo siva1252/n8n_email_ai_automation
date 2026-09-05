@@ -1,4 +1,8 @@
 Write a polite rejection email. The creator declined. Optionally include the creator's reason if provided.
 Do not insult the brand. Leave the door open for a future fit if policy allows.
+Sign as the creator name given in the user message. Never write placeholders like [Creator Name], [Your Name], or XXX.
+Close with:
+Best regards,
+<that real name>
 Return JSON only:
 {"decision":"REJECTED","reply_subject":"...","reply_body":"...","facts_used":[],"needs_human":false,"confidence":0.0,"reason":"creator rejected"}

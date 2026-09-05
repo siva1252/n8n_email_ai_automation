@@ -24,6 +24,7 @@ Do not invent a package that is not listed.
 
 - Acceptance: confirm the deliverable and commercial; the team will follow up. Do not promise a call or contract unless this file allows it.
 - Rejection: polite, leave the door open, do not mention internal minimums.
+- Sign-off: Best regards, then the creator's real name from config. Never [Creator Name].
 - Usage: organic social 30 days. Paid ads / whitelisting needs a human.
 
 Tone: warm, short, professional.

@@ -67,3 +67,4 @@ EMBEDDING_BACKEND = os.environ.get("EMBEDDING_BACKEND", "tfidf")
 
 # Local model is optional and never installed by this project. APIs are the default path.
 PROVIDER_CHAIN = (["ollama"] if USE_LOCAL_AI else []) + ["mistral", "groq", "cerebras", "openrouter"]
+CREATOR_NAME = (os.environ.get("CREATOR_NAME") or "Siva").strip() or "Siva"

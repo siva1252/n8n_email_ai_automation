@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import requests
@@ -21,6 +22,18 @@ ACTIONABLE_INTENTS = {
     "PRODUCT_REVIEW",
     "BUSINESS_INQUIRY",
 }
+
+
+def polish_creator_reply(text: str) -> str:
+    name = getattr(settings, "CREATOR_NAME", "Siva") or "Siva"
+    body = re.sub(r"\*{0,2}\[(?:Creator Name|Your Name|Name)\]\*{0,2}", name, text or "", flags=re.I).strip()
+    if re.search(r"best regards|kind regards|warm regards", body, re.I):
+        if name.lower() not in body.splitlines()[-1].lower():
+            last = body.splitlines()[-1].strip()
+            if last.endswith(",") or last.lower() in {"best regards", "kind regards", "warm regards"}:
+                body = body.rstrip() + f"\n{name}"
+        return body
+    return f"{body}\n\nBest regards,\n{name}"
 
 
 def flask_post(path: str, payload: dict[str, Any], timeout: int = 180) -> dict[str, Any]:
@@ -329,7 +342,7 @@ def _run_ai_pipeline(deal: Deal, email: EmailMessage, normalized: dict[str, Any]
     deal.last_ai_decision = decision
     deal.last_ai_provider = negotiation.get("provider") or deal.last_ai_provider
     deal.last_ai_model = negotiation.get("model") or deal.last_ai_model
-    deal.ai_generated_reply = negotiation.get("reply_body") or negotiation.get("reply") or ""
+    deal.ai_generated_reply = polish_creator_reply(negotiation.get("reply_body") or negotiation.get("reply") or "")
     deal.rag_facts_json = negotiation.get("facts_used") or []
     deal.ai_summary = negotiation.get("reason") or intent.get("reason") or ""
     deal.send_reply = False
@@ -440,17 +453,17 @@ def accept_or_reject(deal: Deal, action: str, user=None, reason: str = "") -> De
     }
     try:
         ai = flask_post("/ai/negotiate", payload)
-        deal.ai_generated_reply = ai.get("reply_body") or ai.get("reply") or deal.ai_generated_reply
+        deal.ai_generated_reply = polish_creator_reply(ai.get("reply_body") or ai.get("reply") or deal.ai_generated_reply)
         record_ai(deal, None, action, ai)
     except Exception as exc:
         logger.warning("closing email AI failed: %s", exc)
         if action == "accept":
-            deal.ai_generated_reply = (
+            deal.ai_generated_reply = polish_creator_reply(
                 deal.ai_generated_reply
                 or "Thank you — we accept this collaboration and will follow up with next steps."
             )
         else:
-            deal.ai_generated_reply = (
+            deal.ai_generated_reply = polish_creator_reply(
                 deal.ai_generated_reply
                 or "Thank you for reaching out. We are unable to take this project on right now."
             )
