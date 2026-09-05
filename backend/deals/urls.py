@@ -1,48 +1,32 @@
 from django.urls import path
-from django.shortcuts import redirect
-from .views import (
-    save_email, 
-    dashboard, 
-    deal_detail, 
-    accept_deal, 
-    reject_deal, 
-    update_ai_reply,
-    login_view,
-    logout_view,
-    save_dashboard_deal,
-    check_deal_exists
-)
 
-def home(request):
-    """Redirect to dashboard if authenticated, otherwise to login"""
-    if request.user.is_authenticated:
-        return redirect('dashboard')
-    return redirect('login')
-
+from . import views
 
 urlpatterns = [
-    # Home page
-    path("", home, name="home"),
-    
-
-    # API endpoints (under /api/)
-    path("save-email/", save_email, name="save_email"),
-    path("deals/check/", check_deal_exists, name="check_deal_exists"),
-    
-
-    # Dashboard views
-    path("dashboard/", dashboard, name="dashboard"),
-    path("deal/<int:deal_id>/", deal_detail, name="deal_detail"),
-    path("deal/<int:deal_id>/accept/", accept_deal, name="accept_deal"),
-    path("deal/<int:deal_id>/reject/", reject_deal, name="reject_deal"),
-    path("deal/<int:deal_id>/update-reply/", update_ai_reply, name="update_ai_reply"),
-    # urls.py
-    path("api/dashboard/deal/", save_dashboard_deal, name="save_dashboard_deal"),
-
-    
-    
-    
-    # Authentication
-    path("login/", login_view, name="login"),
-    path("logout/", logout_view, name="logout"),
+    path("", views.home, name="home"),
+    path("health/", views.health, name="health"),
+    path("login/", views.login_view, name="login"),
+    path("logout/", views.logout_view, name="logout"),
+    path("dashboard/", views.dashboard, name="dashboard"),
+    path("inbox/", views.inbox, name="inbox"),
+    path("spam/", views.spam_box, name="spam_box"),
+    path("human-queue/", views.human_queue, name="human_queue"),
+    path("completed/", views.completed_box, name="completed_box"),
+    path("deal/<int:deal_id>/", views.deal_detail, name="deal_detail"),
+    path("deal/<int:deal_id>/update-reply/", views.update_ai_reply, name="update_ai_reply"),
+    path("deal/<int:deal_id>/accept/", views.accept_deal, name="accept_deal"),
+    path("deal/<int:deal_id>/reject/", views.reject_deal, name="reject_deal"),
+    path("deal/<int:deal_id>/human-action/", views.human_action, name="human_action"),
+    path("deal/<int:deal_id>/reclassify/", views.reclassify_deal, name="reclassify_deal"),
+    path("save-email/", views.save_email, name="save_email"),
+    path("deals/check/", views.check_deal_exists, name="check_deal_exists"),
+    path("api/emails/ingest/", views.ingest_api, name="ingest_api"),
+    path("api/deals/", views.api_deal_list, name="api_deal_list"),
+    path("api/deals/<int:deal_id>/", views.api_deal_detail, name="api_deal_detail"),
+    path("api/deals/<int:deal_id>/accept/", views.api_accept, name="api_accept"),
+    path("api/deals/<int:deal_id>/reject/", views.api_reject, name="api_reject"),
+    path("api/deals/<int:deal_id>/human-action/", views.api_human_action, name="api_human_action"),
+    path("api/ai/reprocess/", views.api_reprocess, name="api_reprocess"),
+    path("api/ai/health/", views.ai_health, name="ai_health"),
+    path("api/dashboard/deal/", views.save_dashboard_deal, name="save_dashboard_deal"),
 ]

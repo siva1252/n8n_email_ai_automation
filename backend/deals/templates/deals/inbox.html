@@ -1,0 +1,69 @@
+{% extends 'deals/base.html' %}
+{% load deals_extras %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="flex items-end justify-between mb-6">
+    <div>
+        <h1 class="text-2xl sm:text-3xl font-semibold">{{ title }}</h1>
+        <p class="text-slate-500 text-sm mt-1">{{ page.paginator.count }} records</p>
+    </div>
+</div>
+<form method="get" class="bg-white border border-slate-200 rounded-xl p-4 mb-6 grid grid-cols-1 md:grid-cols-5 gap-3">
+    <input name="q" value="{{ filters.q }}" placeholder="Search brand, email, subject" class="md:col-span-2 px-3 py-2 border border-slate-300 rounded-md">
+    <select name="status" class="px-3 py-2 border border-slate-300 rounded-md">
+        <option value="">All statuses</option>
+        <option value="NEW" {% if filters.status == 'NEW' %}selected{% endif %}>New</option>
+        <option value="WAITING_FOR_CLIENT" {% if filters.status == 'WAITING_FOR_CLIENT' %}selected{% endif %}>Waiting</option>
+        <option value="PENDING_CREATOR" {% if filters.status == 'PENDING_CREATOR' %}selected{% endif %}>Needs you</option>
+        <option value="HUMAN_REQUIRED" {% if filters.status == 'HUMAN_REQUIRED' %}selected{% endif %}>Needs a call</option>
+        <option value="REVIEW" {% if filters.status == 'REVIEW' %}selected{% endif %}>Review</option>
+        <option value="COMPLETED" {% if filters.status == 'COMPLETED' %}selected{% endif %}>Accepted</option>
+        <option value="SPAM" {% if filters.status == 'SPAM' %}selected{% endif %}>Spam</option>
+    </select>
+    <select name="priority" class="px-3 py-2 border border-slate-300 rounded-md">
+        <option value="">All priority</option>
+        <option value="HIGH" {% if filters.priority == 'HIGH' %}selected{% endif %}>High</option>
+        <option value="MEDIUM" {% if filters.priority == 'MEDIUM' %}selected{% endif %}>Medium</option>
+        <option value="LOW" {% if filters.priority == 'LOW' %}selected{% endif %}>Low</option>
+    </select>
+    <button class="bg-slate-900 text-white rounded-md px-4">Filter</button>
+</form>
+<div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-slate-50 text-slate-500">
+                <tr>
+                    <th class="px-5 py-3 font-medium">Brand</th>
+                    <th class="px-5 py-3 font-medium">Subject</th>
+                    <th class="px-5 py-3 font-medium">Status</th>
+                    <th class="px-5 py-3 font-medium">Priority</th>
+                    <th class="px-5 py-3 font-medium">Updated</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+            {% for deal in page %}
+                <tr class="hover:bg-slate-50">
+                    <td class="px-5 py-3">{{ deal.client.brand_name|default:deal.client.email }}</td>
+                    <td class="px-5 py-3">
+                        <a class="font-medium hover:underline" href="{% url 'deal_detail' deal.id %}">{{ deal.subject }}</a>
+                        {% if spam_view %}<p class="text-xs text-slate-400 mt-1">{{ deal.ai_summary|truncatechars:120 }}</p>{% endif %}
+                    </td>
+                    <td class="px-5 py-3"><span class="text-xs text-white px-2 py-1 rounded-full {{ status_colors|get_item:deal.status }}">{{ deal.get_status_display }}</span></td>
+                    <td class="px-5 py-3"><span class="text-xs px-2 py-1 rounded-full {{ priority_colors|get_item:deal.priority }}">{{ deal.priority }}</span></td>
+                    <td class="px-5 py-3 text-slate-400 whitespace-nowrap">{{ deal.updated_at|date:"M d H:i" }}</td>
+                </tr>
+            {% empty %}
+                <tr><td class="px-5 py-12 text-center text-slate-500" colspan="5">Nothing here yet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% if page.has_other_pages %}
+<div class="flex gap-3 mt-4 text-sm">
+    {% if page.has_previous %}<a class="text-slate-600" href="?page={{ page.previous_page_number }}&q={{ filters.q }}&status={{ filters.status }}&priority={{ filters.priority }}">Previous</a>{% endif %}
+    <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}<a class="text-slate-600" href="?page={{ page.next_page_number }}&q={{ filters.q }}&status={{ filters.status }}&priority={{ filters.priority }}">Next</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

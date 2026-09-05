@@ -3,46 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Client Dashboard{% endblock %}</title>
+    <title>{% block title %}Creator Deals{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .status-badge {
-            @apply px-3 py-1 rounded-full text-white text-xs font-semibold;
-        }
-    </style>
 </head>
-<body class="bg-gray-50">
-    <nav class="bg-white shadow-sm border-b">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <a href="{% url 'dashboard' %}" class="text-xl font-bold text-gray-900">Client Dashboard</a>
-                </div>
-                <div class="flex items-center space-x-4">
-                    {% if user.is_authenticated %}
-                        <span class="text-gray-700">Welcome, {{ user.username }}</span>
-                        <a href="{% url 'logout' %}" class="text-red-600 hover:text-red-800">Logout</a>
-                    {% else %}
-                        <a href="{% url 'login' %}" class="text-blue-600 hover:text-blue-800">Welcome Admin</a>
-                    {% endif %}
-                </div>
-            </div>
+<body class="bg-slate-100 text-slate-900 min-h-screen">
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-20">
+        <div class="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            <a href="{% url 'dashboard' %}" class="font-semibold tracking-tight text-slate-900 shrink-0">Creator Email AI</a>
+            {% if user.is_authenticated %}
+            <nav class="flex items-center gap-4 lg:gap-6 text-sm text-slate-600 flex-wrap justify-end">
+                <a href="{% url 'dashboard' %}" class="hover:text-slate-900">Dashboard</a>
+                <a href="{% url 'inbox' %}" class="hover:text-slate-900">Inbox</a>
+                <a href="{% url 'human_queue' %}" class="hover:text-slate-900">Needs a call</a>
+                <a href="{% url 'spam_box' %}" class="hover:text-slate-900">Spam</a>
+                <a href="{% url 'completed_box' %}" class="hover:text-slate-900">Done</a>
+                <span class="text-slate-400 hidden sm:inline">{{ user.username }}</span>
+                <a href="{% url 'logout' %}" class="text-rose-600 hover:text-rose-800">Logout</a>
+            </nav>
+            {% endif %}
         </div>
-    </nav>
-
+    </header>
     {% if messages %}
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} bg-{% if message.tags == 'error' %}red{% elif message.tags == 'success' %}green{% else %}blue{% endif %}-100 border border-{% if message.tags == 'error' %}red{% elif message.tags == 'success' %}green{% else %}blue{% endif %}-400 text-{% if message.tags == 'error' %}red{% elif message.tags == 'success' %}green{% else %}blue{% endif %}-700 px-4 py-3 rounded mb-4">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
+    <div class="w-full px-4 sm:px-6 lg:px-8 mt-4 space-y-2">
+        {% for message in messages %}
+        <div class="rounded-md px-4 py-3 text-sm {% if message.tags == 'error' %}bg-rose-50 text-rose-800{% else %}bg-emerald-50 text-emerald-800{% endif %}">{{ message }}</div>
+        {% endfor %}
+    </div>
     {% endif %}
-
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="w-full px-4 sm:px-6 lg:px-8 py-6">
         {% block content %}{% endblock %}
     </main>
 </body>
 </html>
-
