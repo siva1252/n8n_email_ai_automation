@@ -1,0 +1,27 @@
+{
+  "thread_id": "demo-06-human-call",
+  "subject": "Need to jump on a call",
+  "status": "HUMAN_REQUIRED",
+  "intent": "BUSINESS_INQUIRY",
+  "priority": "HIGH",
+  "spam_decision": "NOT_SPAM",
+  "confidence": 0.88,
+  "human_required": true,
+  "human_required_reason": "Client requested a phone call with the creator.",
+  "ai_decision": "HUMAN_REQUIRED",
+  "ai_reply": "",
+  "ai_summary": "Autonomous sending stopped. Creator should call/message and record notes.",
+  "provider": "policy",
+  "model": "rules",
+  "extracted": {"brand_name": "Harbor Media", "meeting_requested": true, "human_contact_requested": true, "phone": "+91-90000-11111"},
+  "client": {"email": "ajay@harbor.demo.local", "brand_name": "Harbor Media", "contact_name": "Ajay", "phone": "+91-90000-11111"},
+  "human_note": "Demo: call requested. Use this card to show human queue.",
+  "messages": [
+    {
+      "direction": "INCOMING",
+      "from_email": "ajay@harbor.demo.local",
+      "to_email": "creator@demo.local",
+      "body": "Hi, we need to talk with you for a business collaboration. Please call me at +91-90000-11111 this week."
+    }
+  ]
+}

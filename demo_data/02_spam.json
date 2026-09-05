@@ -1,0 +1,23 @@
+{
+  "thread_id": "demo-02-spam",
+  "subject": "You won a crypto prize — verify now",
+  "status": "SPAM",
+  "intent": "",
+  "priority": "LOW",
+  "spam_decision": "SPAM",
+  "confidence": 0.96,
+  "ai_decision": "SPAM",
+  "ai_reply": "",
+  "ai_summary": "Prize/phishing lure with urgent verification language.",
+  "provider": "ollama",
+  "model": "local-demo",
+  "client": {"email": "noreply@prize-alert.demo.local", "brand_name": "", "contact_name": "", "phone": ""},
+  "messages": [
+    {
+      "direction": "INCOMING",
+      "from_email": "noreply@prize-alert.demo.local",
+      "to_email": "creator@demo.local",
+      "body": "Congratulations! You have won a crypto giveaway. Click here immediately and verify your password to claim your prize: http://bit.ly/not-real"
+    }
+  ]
+}

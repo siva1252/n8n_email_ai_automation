@@ -1,0 +1,26 @@
+{
+  "thread_id": "demo-03-promo-nophone",
+  "subject": "Product seeding + 1 Reel",
+  "status": "NEED_INFORMATION",
+  "intent": "PROMOTION",
+  "priority": "MEDIUM",
+  "spam_decision": "NOT_SPAM",
+  "confidence": 0.87,
+  "budget_offered": 5000,
+  "currency": "INR",
+  "ai_decision": "NEGOTIATE",
+  "ai_reply": "Thanks for the brief — a Reel at INR 5000 is in range for a standard package. We do not have a phone number on file; email is enough for now. Please confirm timeline and shipping address for the product.",
+  "ai_summary": "Promotion with budget, phone missing (left null, not invented).",
+  "provider": "ollama",
+  "model": "local-demo",
+  "extracted": {"brand_name": "Glowbar", "phone": null, "budget_offered": 5000, "product": "Vitamin C serum"},
+  "client": {"email": "hello@glowbar.demo.local", "brand_name": "Glowbar", "contact_name": "Amit", "phone": ""},
+  "messages": [
+    {
+      "direction": "INCOMING",
+      "from_email": "hello@glowbar.demo.local",
+      "to_email": "creator@demo.local",
+      "body": "Hi, Glowbar here. We can offer INR 5000 plus product for one Instagram Reel featuring our vitamin C serum. No phone on this thread."
+    }
+  ]
+}

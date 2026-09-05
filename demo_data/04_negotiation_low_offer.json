@@ -1,0 +1,37 @@
+{
+  "thread_id": "demo-04-low-offer",
+  "subject": "Reel for INR 3500",
+  "status": "WAITING_FOR_CLIENT",
+  "intent": "COLLABORATION",
+  "priority": "MEDIUM",
+  "spam_decision": "NOT_SPAM",
+  "confidence": 0.9,
+  "budget_offered": 3500,
+  "currency": "INR",
+  "negotiation_round": 1,
+  "ai_decision": "NEGOTIATE",
+  "ai_reply": "Thanks for the offer. For a Reel of this scope we usually work closer to our standard package around INR 5000. Happy to look at a revised number if there is flexibility.",
+  "ai_summary": "Offer below placeholder minimum; counter toward target.",
+  "provider": "ollama",
+  "model": "local-demo",
+  "rag_facts": ["creator_policy.md#How to negotiate"],
+  "extracted": {"brand_name": "Bean&Co", "budget_offered": 3500, "deliverables": ["1 reel"]},
+  "client": {"email": "campaigns@beanco.demo.local", "brand_name": "Bean&Co", "contact_name": "Ravi"},
+  "messages": [
+    {
+      "direction": "INCOMING",
+      "from_email": "campaigns@beanco.demo.local",
+      "to_email": "creator@demo.local",
+      "body": "We can offer 3500 for one reel promoting our cold brew."
+    },
+    {
+      "direction": "OUTGOING",
+      "from_email": "creator@demo.local",
+      "to_email": "campaigns@beanco.demo.local",
+      "body": "Thanks for the offer. For a Reel of this scope we usually work closer to our standard package around INR 5000. Happy to look at a revised number if there is flexibility."
+    }
+  ],
+  "turns": [
+    {"round": 1, "decision": "NEGOTIATE", "offer_amount": 3500, "client_message": "We can offer 3500 for one reel", "ai_reply": "Counter toward 5000"}
+  ]
+}

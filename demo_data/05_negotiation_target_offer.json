@@ -1,0 +1,26 @@
+{
+  "thread_id": "demo-05-target-offer",
+  "subject": "Campaign at INR 8000",
+  "status": "PENDING_CREATOR",
+  "intent": "SPONSORSHIP",
+  "priority": "HIGH",
+  "spam_decision": "NOT_SPAM",
+  "confidence": 0.93,
+  "budget_offered": 8000,
+  "currency": "INR",
+  "ai_decision": "READY_TO_CLOSE",
+  "ai_reply": "Thank you — INR 8000 for a Reel + Stories pack matches our integrated campaign package. If you are happy, we can confirm and I will share next steps after internal sign-off.",
+  "ai_summary": "Offer at/above target package. Waiting on creator Accept/Reject.",
+  "provider": "ollama",
+  "model": "local-demo",
+  "extracted": {"brand_name": "Peak Athletics", "budget_offered": 8000, "deliverables": ["1 Reel", "3 Stories"]},
+  "client": {"email": "partnerships@peak.demo.local", "brand_name": "Peak Athletics", "contact_name": "Meera"},
+  "messages": [
+    {
+      "direction": "INCOMING",
+      "from_email": "partnerships@peak.demo.local",
+      "to_email": "creator@demo.local",
+      "body": "We would like to sponsor a Reel plus three Stories. Budget is INR 8000. Product ships this week."
+    }
+  ]
+}

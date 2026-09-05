@@ -1,0 +1,27 @@
+{
+  "thread_id": "demo-01-collab",
+  "subject": "Paid collaboration for our summer launch",
+  "status": "NEW",
+  "intent": "COLLABORATION",
+  "priority": "MEDIUM",
+  "spam_decision": "NOT_SPAM",
+  "confidence": 0.91,
+  "budget_offered": null,
+  "currency": "INR",
+  "ai_decision": "NEED_INFORMATION",
+  "ai_reply": "Hi Priya — thanks for reaching out about the summer launch. This sounds like a fit. Could you share the exact deliverables, timeline, and the budget range you had in mind?",
+  "ai_summary": "Legitimate collab inquiry missing budget.",
+  "provider": "ollama",
+  "model": "local-demo",
+  "rag_facts": ["creator_policy.md#Packages (INR, placeholders)"],
+  "extracted": {"brand_name": "Northline Apparel", "phone": null, "budget_offered": null, "deliverables": ["Instagram Reel"]},
+  "client": {"email": "priya@northline.demo.local", "brand_name": "Northline Apparel", "contact_name": "Priya Shah", "phone": ""},
+  "messages": [
+    {
+      "direction": "INCOMING",
+      "from_email": "priya@northline.demo.local",
+      "to_email": "creator@demo.local",
+      "body": "Hi, we would like to collaborate on a paid Instagram Reel for our summer launch. Can we discuss a partnership?"
+    }
+  ]
+}

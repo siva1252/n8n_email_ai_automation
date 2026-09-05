@@ -1,0 +1,46 @@
+{
+  "thread_id": "demo-04-low-offer",
+  "subject": "Re: Reel for INR 3500",
+  "status": "PENDING_CREATOR",
+  "intent": "COLLABORATION",
+  "priority": "HIGH",
+  "spam_decision": "NOT_SPAM",
+  "confidence": 0.9,
+  "budget_offered": 4500,
+  "currency": "INR",
+  "negotiation_round": 2,
+  "ai_decision": "READY_TO_CLOSE",
+  "ai_reply": "Appreciate you meeting us at INR 4500 — that is at or above our minimum for a single Reel. I will pause here for internal confirmation and then send a final yes or an alternative.",
+  "ai_summary": "Same Gmail thread, client replied with a higher offer. Still one Deal.",
+  "provider": "ollama",
+  "model": "local-demo",
+  "extracted": {"brand_name": "Bean&Co", "budget_offered": 4500},
+  "client": {"email": "campaigns@beanco.demo.local", "brand_name": "Bean&Co", "contact_name": "Ravi"},
+  "messages": [
+    {
+      "direction": "INCOMING",
+      "gmail_message_id": "demo-04-low-offer-m0",
+      "from_email": "campaigns@beanco.demo.local",
+      "to_email": "creator@demo.local",
+      "body": "We can offer 3500 for one reel promoting our cold brew."
+    },
+    {
+      "direction": "OUTGOING",
+      "gmail_message_id": "demo-04-low-offer-m1",
+      "from_email": "creator@demo.local",
+      "to_email": "campaigns@beanco.demo.local",
+      "body": "Thanks for the offer. For a Reel of this scope we usually work closer to our standard package around INR 5000."
+    },
+    {
+      "direction": "INCOMING",
+      "gmail_message_id": "demo-04-low-offer-m2",
+      "from_email": "campaigns@beanco.demo.local",
+      "to_email": "creator@demo.local",
+      "body": "Best we can do is 4500 and we need to lock this week."
+    }
+  ],
+  "turns": [
+    {"round": 1, "decision": "NEGOTIATE", "offer_amount": 3500},
+    {"round": 2, "decision": "READY_TO_CLOSE", "offer_amount": 4500}
+  ]
+}
