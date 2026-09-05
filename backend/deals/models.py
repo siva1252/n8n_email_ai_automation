@@ -59,6 +59,7 @@ class Deal(models.Model):
     send_reply = models.BooleanField(default=False)
     our_reply_sent_at = models.DateTimeField(blank=True, null=True)
     client_replied_at = models.DateTimeField(blank=True, null=True)
+    header_unseen = models.BooleanField(default=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True, db_index=True)
 
@@ -66,6 +67,7 @@ class Deal(models.Model):
         indexes = [
             models.Index(fields=["status", "priority"]),
             models.Index(fields=["-updated_at"]),
+            models.Index(fields=["header_unseen", "status"]),
         ]
 
     def __str__(self):
@@ -74,6 +76,12 @@ class Deal(models.Model):
     @property
     def is_terminal(self):
         return self.status in self.TERMINAL_STATUSES
+
+    def mark_header_seen(self):
+        if not self.header_unseen:
+            return
+        self.header_unseen = False
+        self.save(update_fields=["header_unseen"])
 
 
 class EmailMessage(models.Model):

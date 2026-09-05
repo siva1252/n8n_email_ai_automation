@@ -14,14 +14,44 @@
             <nav class="flex items-center gap-4 lg:gap-6 text-sm text-slate-600 flex-wrap justify-end">
                 <a href="{% url 'dashboard' %}" class="hover:text-slate-900">Dashboard</a>
                 <a href="{% url 'inbox' %}" class="hover:text-slate-900">Inbox</a>
-                <a href="{% url 'human_queue' %}" class="hover:text-slate-900">Needs a call</a>
+                <a href="{% url 'human_queue' %}" class="hover:text-slate-900 inline-flex items-center gap-1.5">
+                    Needs a call
+                    {% if header_alerts.needs_call %}
+                    <span class="min-w-[1.25rem] h-5 px-1.5 rounded-full bg-rose-600 text-white text-[11px] font-semibold leading-5 text-center">{{ header_alerts.needs_call }}</span>
+                    {% endif %}
+                </a>
                 <a href="{% url 'spam_box' %}" class="hover:text-slate-900">Spam</a>
-                <a href="{% url 'completed_box' %}" class="hover:text-slate-900">Done</a>
+                <a href="{% url 'completed_box' %}" class="hover:text-slate-900 inline-flex items-center gap-1.5">
+                    Done
+                    {% if header_alerts.accepted or header_alerts.rejected %}
+                    <span class="min-w-[1.25rem] h-5 px-1.5 rounded-full bg-slate-800 text-white text-[11px] font-semibold leading-5 text-center">{{ header_alerts.accepted|add:header_alerts.rejected }}</span>
+                    {% endif %}
+                </a>
                 <span class="text-slate-400 hidden sm:inline">{{ user.username }}</span>
                 <a href="{% url 'logout' %}" class="text-rose-600 hover:text-rose-800">Logout</a>
             </nav>
             {% endif %}
         </div>
+        {% if user.is_authenticated %}
+        <div class="w-full px-4 sm:px-6 lg:px-8 py-2.5 border-t border-slate-100 bg-slate-50 flex flex-wrap items-center gap-2">
+            <a href="{% url 'human_queue' %}" class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs sm:text-sm {% if header_alerts.needs_call %}bg-rose-50 border-rose-200 text-rose-800{% else %}bg-white border-slate-200 text-slate-500{% endif %}">
+                <span class="font-medium">Needs a call</span>
+                <span class="rounded-full px-1.5 py-0.5 text-[11px] font-semibold {% if header_alerts.needs_call %}bg-rose-600 text-white{% else %}bg-slate-200 text-slate-600{% endif %}">{{ header_alerts.needs_call }}</span>
+            </a>
+            <a href="{% url 'inbox' %}?status=PENDING_CREATOR" class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs sm:text-sm {% if header_alerts.needs_you %}bg-violet-50 border-violet-200 text-violet-800{% else %}bg-white border-slate-200 text-slate-500{% endif %}">
+                <span class="font-medium">Needs you</span>
+                <span class="rounded-full px-1.5 py-0.5 text-[11px] font-semibold {% if header_alerts.needs_you %}bg-violet-600 text-white{% else %}bg-slate-200 text-slate-600{% endif %}">{{ header_alerts.needs_you }}</span>
+            </a>
+            <a href="{% url 'completed_box' %}?status=COMPLETED" class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs sm:text-sm {% if header_alerts.accepted %}bg-emerald-50 border-emerald-200 text-emerald-800{% else %}bg-white border-slate-200 text-slate-500{% endif %}">
+                <span class="font-medium">Accepted</span>
+                <span class="rounded-full px-1.5 py-0.5 text-[11px] font-semibold {% if header_alerts.accepted %}bg-emerald-600 text-white{% else %}bg-slate-200 text-slate-600{% endif %}">{{ header_alerts.accepted }}</span>
+            </a>
+            <a href="{% url 'completed_box' %}?status=REJECTED" class="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs sm:text-sm {% if header_alerts.rejected %}bg-red-50 border-red-200 text-red-800{% else %}bg-white border-slate-200 text-slate-500{% endif %}">
+                <span class="font-medium">Rejected</span>
+                <span class="rounded-full px-1.5 py-0.5 text-[11px] font-semibold {% if header_alerts.rejected %}bg-red-600 text-white{% else %}bg-slate-200 text-slate-600{% endif %}">{{ header_alerts.rejected }}</span>
+            </a>
+        </div>
+        {% endif %}
     </header>
     {% if messages %}
     <div class="w-full px-4 sm:px-6 lg:px-8 mt-4 space-y-2">

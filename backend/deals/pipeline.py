@@ -196,7 +196,8 @@ def ingest_email(raw: dict[str, Any]) -> dict[str, Any]:
             received_at=normalized.get("received_at") or timezone.now(),
         )
         deal.client_replied_at = timezone.now()
-        deal.save(update_fields=["client_replied_at", "updated_at"])
+        deal.header_unseen = True
+        deal.save(update_fields=["client_replied_at", "header_unseen", "updated_at"])
 
         if deal.is_terminal:
             return {
@@ -471,6 +472,7 @@ def accept_or_reject(deal: Deal, action: str, user=None, reason: str = "") -> De
     deal.status = "COMPLETED" if action == "accept" else "REJECTED"
     deal.human_required = False
     deal.send_reply = True
+    deal.header_unseen = False
     deal.save()
     HumanAction.objects.create(deal=deal, action=action, reason=reason, user=user)
     EmailMessage.objects.create(

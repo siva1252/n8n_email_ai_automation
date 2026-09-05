@@ -2,7 +2,7 @@ import json
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import Client as TestClient, TestCase, override_settings
+from django.test import Client as TestClient, RequestFactory, TestCase, override_settings
 
 from deals.gmail_parser import html_to_text, normalize_gmail_payload
 from deals.models import Client, Deal, EmailMessage, HumanAction
@@ -366,3 +366,25 @@ class DashboardAcceptRejectTests(TestCase):
         self.assertTrue(
             HumanAction.objects.filter(deal=deal, action="reject", reason="Dates do not work").exists()
         )
+
+
+class HeaderAlertTests(TestCase):
+    def test_header_counts_call_accepted_rejected(self):
+        from deals.context_processors import header_alerts
+
+        user = User.objects.create_user("admin", "admin@localhost", "x")
+        brand = Client.objects.create(email="alerts@brand.test", brand_name="Alert Co")
+        Deal.objects.create(client=brand, subject="Call me", thread_id="ha-call", status="HUMAN_REQUIRED", human_required=True)
+        Deal.objects.create(client=brand, subject="Yes", thread_id="ha-ok", status="COMPLETED")
+        Deal.objects.create(client=brand, subject="No", thread_id="ha-no", status="REJECTED")
+        req = RequestFactory().get("/")
+        req.user = user
+        alerts = header_alerts(req)["header_alerts"]
+        self.assertEqual(alerts["needs_call"], 1)
+        self.assertEqual(alerts["accepted"], 1)
+        self.assertEqual(alerts["rejected"], 1)
+        Deal.objects.filter(thread_id="ha-call").first().mark_header_seen()
+        alerts = header_alerts(req)["header_alerts"]
+        self.assertEqual(alerts["needs_call"], 0)
+        self.assertEqual(alerts["accepted"], 1)
+        self.assertEqual(alerts["rejected"], 1)

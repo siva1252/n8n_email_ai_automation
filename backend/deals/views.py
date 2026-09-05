@@ -40,7 +40,10 @@ def _deal_queryset(request, extra_filter=None):
             | Q(thread_id__icontains=q)
         )
     if status:
-        qs = qs.filter(status=status)
+        if status == "REJECTED":
+            qs = qs.filter(status__in=["REJECTED", "AUTO_REJECTED"])
+        else:
+            qs = qs.filter(status=status)
     if priority:
         qs = qs.filter(priority=priority)
     if intent:
@@ -215,6 +218,7 @@ def completed_box(request):
 @login_required
 def deal_detail(request, deal_id):
     deal = get_object_or_404(Deal.objects.select_related("client"), id=deal_id)
+    deal.mark_header_seen()
     return render(
         request,
         "deals/deal_detail.html",
@@ -343,6 +347,7 @@ def api_deal_list(request):
 @require_GET
 def api_deal_detail(request, deal_id):
     deal = get_object_or_404(Deal.objects.select_related("client"), id=deal_id)
+    deal.mark_header_seen()
     return JsonResponse(
         {
             "id": deal.id,
