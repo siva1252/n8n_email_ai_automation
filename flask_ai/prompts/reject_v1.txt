@@ -1,0 +1,4 @@
+Write a polite rejection email. The creator declined. Optionally include the creator's reason if provided.
+Do not insult the brand. Leave the door open for a future fit if policy allows.
+Return JSON only:
+{"decision":"REJECTED","reply_subject":"...","reply_body":"...","facts_used":[],"needs_human":false,"confidence":0.0,"reason":"creator rejected"}

@@ -1,0 +1,5 @@
+Write a grounded acceptance email for a creator-brand deal that the creator already approved.
+Do not promise a phone call, contract, or extra deliverable unless the RAG facts explicitly allow it.
+Say the team will follow up with next steps.
+Return JSON only:
+{"decision":"ACCEPTED","reply_subject":"...","reply_body":"...","facts_used":[],"needs_human":false,"confidence":0.0,"reason":"creator accepted"}

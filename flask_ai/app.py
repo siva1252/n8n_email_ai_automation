@@ -1,156 +1,101 @@
-from flask import Flask, request, jsonify
-import os
-import json
-import re
-from pathlib import Path
-from sarvamai import SarvamAI
-from dotenv import load_dotenv
+from flask import Flask, jsonify, request
 
-# Prefer project-root .env (Docker also injects via compose env_file)
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
-load_dotenv()
+from config import AI_MOCK
+from extract import extract_lead
+from intent import classify_intent
+from negotiation import negotiate
+from rag import build_index, facts_for_prompt
+from router import provider_health
+from schemas import ExtractRequest, IntentRequest, NegotiationRequest, SpamRequest
+from spam import classify_spam
+from telemetry import log_event
 
 app = Flask(__name__)
 
-api_key = os.environ.get("SARVAM_API_KEY")
-client = SarvamAI(api_subscription_key=api_key) if api_key else None
 
-# Sarvam chat models: sarvam-30b (faster) or sarvam-105b (stronger)
-MODEL = os.environ.get("SARVAM_MODEL", "sarvam-30b")
-
-
-def _extract_json(text: str) -> dict:
-    """Parse JSON from model output, including fenced ```json blocks."""
-    text = (text or "").strip()
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
-
-    fence = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
-    if fence:
-        return json.loads(fence.group(1))
-
-    brace = re.search(r"\{.*\}", text, re.DOTALL)
-    if brace:
-        return json.loads(brace.group(0))
-
-    raise ValueError(f"No JSON object found in model response: {text[:200]}")
-
-
-def _chat(system_instruction: str, user_content: str) -> dict:
-    if not client:
-        raise RuntimeError("SARVAM_API_KEY is not set")
-
-    response = client.chat.completions(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": system_instruction},
-            {"role": "user", "content": user_content},
-        ],
-        temperature=0.2,
-    )
-    content = response.choices[0].message.content
-    return _extract_json(content)
-
-
-@app.route("/", methods=["GET"])
+@app.get("/")
 def index():
-    return jsonify({"message": "This is Flask AI Server (Sarvam Edition)"}), 200
+    return jsonify({"message": "Flask AI Gateway", "ai": True, "mock": AI_MOCK})
 
 
-@app.route("/health", methods=["GET"])
+@app.get("/health")
+@app.get("/api/ai/health")
 def health():
-    return jsonify({
-        "status": "Flask AI running with Sarvam",
-        "model": MODEL,
-        "api_key_configured": bool(api_key),
-    })
+    return jsonify({"status": "ok", **provider_health()})
 
 
-@app.route("/classify_email", methods=["POST"])
+@app.post("/classify_email")
+@app.post("/ai/spam")
 def classify_email():
-    data = request.get_json() or {}
-    body = data.get("body", "")
-
-    system_instruction = """You are an Expert Business Assistant. Analyze the email below.
-
-Your goal is to identify Business Collaboration Inquiries (Brand deals, sponsorships, PR, promotion requests, partnership offers).
-
-Even if the email is short, has spelling errors, or comes from an unknown company, if it mentions "promotion", "collab", "sponsorship", "deal", or "partnership", it should be considered "useful".
-
-Return JSON in the format:
-{
-  "category": "useful",
-  "reason": "Brief explanation why"
-}
-
-ONLY use "spam" for obvious newsletters, personal family chats, or random non-business garbage. If in doubt, mark as "useful" so the creator doesn't miss money. Always output valid JSON only."""
-
-    try:
-        result = _chat(system_instruction, f"Email Body:\n{body}")
-        category = result.get("category", "spam")
-        reason = result.get("reason", "No reason provided")
-    except Exception as e:
-        print(f"Classification error: {e}")
-        category = "spam"
-        reason = f"Error occurred: {str(e)}"
-
-    return jsonify({"category": category, "reason": reason})
+    data = request.get_json(silent=True) or {}
+    req = SpamRequest.model_validate(data)
+    result = classify_spam(req, correlation_id=str(data.get("correlation_id") or ""))
+    payload = result.model_dump()
+    payload["category"] = "spam" if result.decision == "SPAM" else "useful"
+    return jsonify(payload)
 
 
-@app.route("/generate_reply", methods=["POST"])
+@app.post("/ai/intent")
+def intent():
+    data = request.get_json(silent=True) or {}
+    result = classify_intent(IntentRequest.model_validate(data), correlation_id=str(data.get("correlation_id") or ""))
+    return jsonify(result.model_dump())
+
+
+@app.post("/ai/extract")
+def extract():
+    data = request.get_json(silent=True) or {}
+    result = extract_lead(ExtractRequest.model_validate(data), correlation_id=str(data.get("correlation_id") or ""))
+    return jsonify(result.model_dump())
+
+
+@app.post("/generate_reply")
+@app.post("/ai/negotiate")
 def generate_reply():
-    data = request.get_json() or {}
-    min_price = data.get("min_price", 4000)
-    goal_price = data.get("goal_price", 5000)
-    chat_history = data.get("chat_history", [])
-    incoming_body = data.get("body", "")
-    action = data.get("action", "negotiate")
+    data = request.get_json(silent=True) or {}
+    req = NegotiationRequest.model_validate(data)
+    result = negotiate(req, correlation_id=str(data.get("correlation_id") or ""))
+    payload = result.model_dump()
+    payload["reply"] = result.reply_body
+    return jsonify(payload)
 
-    if action == "accept":
-        system_instruction = """You are a Business Manager. The exact terms of the deal have been accepted by the creator. Write a professional, polite email to the brand saying that we accept the deal and are excited to begin our collaboration. Output JSON exactly in this format: {"reply": "...", "decision": "accepted"}"""
-    elif action == "reject":
-        system_instruction = """You are a Business Manager. The creator has decided to decline the brand's offer. Write a professional, polite email to the brand stating that we do not have the time for this project right now, apologize for the inconvenience, and suggest that we might collaborate on another project in the future. Output JSON exactly in this format: {"reply": "...", "decision": "rejected"}"""
-    else:
-        system_instruction = f"""You are a shrewd Business Manager gently but firmly negotiating an email deal on behalf of a creator.
-You negotiate just like a real human.
-Rules:
-- If they offer a low price (e.g. ₹3500), counter-offer high (e.g. ₹5000 or ₹6000).
-- If they offer a high price initially (e.g. ₹10000), counter-offer even higher (e.g. ₹15000).
-- If they hover near the minimum acceptable price (₹{min_price}), push them higher (e.g. to ₹{goal_price}) but keep the conversation open.
-- Try to secure the best deal possible. Always try to negotiate their first offer.
-- If they absolutely stand firm on a price at or above ₹{min_price} after some back-and-forth, set the decision status to 'ready_to_close'.
-Output your response as JSON in this exact format:
-{{
-  "reply": "Your negotiation reply text here...",
-  "decision": "negotiating"
-}}
-Valid decision values: "negotiating" or "ready_to_close". Always output valid JSON only."""
 
-    history_text = "Chat History:\n"
-    for msg in chat_history:
-        role = "Sender" if msg.get("role") == "client" else "Creator (You)"
-        history_text += f"{role}: {msg.get('content')}\n\n"
+@app.post("/ai/rag")
+def rag_query():
+    data = request.get_json(silent=True) or {}
+    query = data.get("query") or data.get("body") or ""
+    return jsonify({"facts": facts_for_prompt(query)})
 
-    history_text += f"Latest Sender Email or Instruction:\n{incoming_body}"
 
+@app.post("/ai/pipeline")
+def pipeline():
+    data = request.get_json(silent=True) or {}
+    cid = str(data.get("correlation_id") or "")
+    spam = classify_spam(SpamRequest.model_validate(data), correlation_id=cid)
+    out = {"spam": spam.model_dump()}
+    if spam.decision != "NOT_SPAM":
+        log_event("pipeline_stopped", correlation_id=cid, reason=spam.decision)
+        return jsonify(out)
+    intent = classify_intent(IntentRequest.model_validate(data), correlation_id=cid)
+    extract = extract_lead(ExtractRequest.model_validate(data), correlation_id=cid)
+    out["intent"] = intent.model_dump()
+    out["extract"] = extract.model_dump()
+    neg_payload = dict(data)
+    neg_payload["extracted"] = extract.model_dump()
+    negotiation = negotiate(NegotiationRequest.model_validate(neg_payload), correlation_id=cid)
+    out["negotiation"] = negotiation.model_dump()
+    out["negotiation"]["reply"] = negotiation.reply_body
+    return jsonify(out)
+
+
+def boot():
     try:
-        result = _chat(system_instruction, history_text)
-        reply = result.get("reply", "I need some more time to review this offer.")
-        decision = result.get(
-            "decision",
-            action if action in ["accept", "reject"] else "negotiating",
-        )
-    except Exception as e:
-        print(f"Reply error: {e}")
-        reply = "We are reviewing your inquiry and will get back to you shortly."
-        decision = action if action in ["accept", "reject"] else "negotiating"
+        build_index()
+    except Exception as exc:
+        log_event("rag_boot_failed", error=str(exc))
 
-    return jsonify({
-        "reply": reply.strip(),
-        "decision": decision,
-    })
+
+boot()
 
 
 if __name__ == "__main__":
