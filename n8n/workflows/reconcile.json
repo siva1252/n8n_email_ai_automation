@@ -1,0 +1,64 @@
+{
+  "name": "Gmail Reconciliation",
+  "id": "gmail-reconcile",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 6 }]
+        }
+      },
+      "id": "schedule",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "simple": false,
+        "filters": {
+          "q": "newer_than:2d"
+        },
+        "options": {
+          "maxResults": 50
+        }
+      },
+      "id": "list-gmail",
+      "name": "List Recent Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://host.docker.internal:8000/deals/check/?thread_id={{$json.threadId}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Internal-API-Key", "value": "={{$env.INTERNAL_API_KEY}}" }
+          ]
+        }
+      },
+      "id": "check-deal",
+      "name": "Check Stored Thread",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {
+      "main": [[{ "node": "List Recent Gmail", "type": "main", "index": 0 }]]
+    },
+    "List Recent Gmail": {
+      "main": [[{ "node": "Check Stored Thread", "type": "main", "index": 0 }]]
+    }
+  }
+}

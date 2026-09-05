@@ -1,0 +1,177 @@
+{
+  "name": "Incoming Email Pipeline",
+  "id": "incoming-email-pipeline",
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [{ "mode": "everyMinute" }]
+        },
+        "simple": true,
+        "downloadAttachments": false
+      },
+      "id": "gmail-trigger",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300],
+      "webhookId": "gmail-trigger-local",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "8KCxPfpiIW8Mx4E0",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ingest-email",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-ingest",
+      "name": "Demo Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 520],
+      "webhookId": "ingest-email"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json || {};\nconst item = (raw.body && typeof raw.body === 'object' && !Array.isArray(raw.body)) ? { ...raw, ...raw.body } : raw;\nconst headers = item.headers || item.payload?.headers || [];\nconst headerMap = Array.isArray(headers)\n  ? Object.fromEntries(headers.map(h => [h.name || h.key, h.value]))\n  : (headers || {});\nconst asText = (v) => {\n  if (v == null) return '';\n  if (typeof v === 'string') return v;\n  if (typeof v === 'object') return v.address || v.email || v.text || v.value || '';\n  return String(v);\n};\nconst from = asText(item.from_email || item.from || headerMap.From || item.From);\nconst to = asText(item.to_email || item.to || headerMap.To || item.To);\nconst subject = item.subject || headerMap.Subject || item.Subject || '(no subject)';\nconst body = asText(item.body_text || item.textPlain || item.text || item.snippet || item.body || '');\nconst html = asText(item.body_html || item.textHtml || item.html || '');\nreturn [{\n  json: {\n    gmail_message_id: item.gmail_message_id || item.id || item.messageId || headerMap['Message-ID'],\n    thread_id: String(item.thread_id || item.threadId || item.thread || ''),\n    subject,\n    body,\n    body_text: body,\n    body_html: html,\n    from_email: from,\n    to_email: to,\n    reply_to: asText(item.reply_to || headerMap['Reply-To'] || ''),\n    headers: headerMap,\n    labels: item.labels || item.labelIds || [],\n    attachments: item.attachments || [],\n    direction: 'INCOMING',\n    skip_ai: Boolean(item.skip_ai)\n  }\n}];"
+      },
+      "id": "normalize",
+      "name": "Normalize Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/emails/ingest/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Internal-API-Key", "value": "={{$env.INTERNAL_API_KEY}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json}}",
+        "options": { "timeout": 180000 }
+      },
+      "id": "django-ingest",
+      "name": "Django Ingest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.send_reply === true && !!$json.ai_reply}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-send",
+      "name": "Should Send Reply",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [740, 400]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$json.to_email}}",
+        "subject": "={{$json.reply_subject || $('Django Ingest').item.json.reply_subject}}",
+        "message": "={{$json.ai_reply}}",
+        "emailType": "text",
+        "options": {}
+      },
+      "id": "gmail-send",
+      "name": "Gmail Send Reply",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [980, 280],
+      "continueOnFail": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "8KCxPfpiIW8Mx4E0",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/emails/ingest/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Internal-API-Key", "value": "={{$env.INTERNAL_API_KEY}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { thread_id: $('Django Ingest').item.json.thread_id, subject: $('Django Ingest').item.json.reply_subject, body: $('Django Ingest').item.json.ai_reply, from_email: 'creator@local', to_email: $('Django Ingest').item.json.to_email, direction: 'OUTGOING', idempotency_key: 'out:' + $('Django Ingest').item.json.deal_id + ':' + $('Django Ingest').item.json.email_message_id } }}",
+        "options": {}
+      },
+      "id": "save-outgoing",
+      "name": "Save Outgoing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1220, 280],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($('Django Ingest').item.json) }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [980, 520]
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [[{ "node": "Normalize Email", "type": "main", "index": 0 }]]
+    },
+    "Demo Webhook": {
+      "main": [[{ "node": "Normalize Email", "type": "main", "index": 0 }]]
+    },
+    "Normalize Email": {
+      "main": [[{ "node": "Django Ingest", "type": "main", "index": 0 }]]
+    },
+    "Django Ingest": {
+      "main": [[{ "node": "Should Send Reply", "type": "main", "index": 0 }]]
+    },
+    "Should Send Reply": {
+      "main": [
+        [{ "node": "Gmail Send Reply", "type": "main", "index": 0 }],
+        [{ "node": "Respond", "type": "main", "index": 0 }]
+      ]
+    },
+    "Gmail Send Reply": {
+      "main": [[{ "node": "Save Outgoing", "type": "main", "index": 0 }]]
+    },
+    "Save Outgoing": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  }
+}

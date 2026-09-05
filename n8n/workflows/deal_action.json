@@ -1,0 +1,139 @@
+{
+  "name": "Deal Action Webhook",
+  "id": "deal-action-webhook",
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "deal-action",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "deal-webhook",
+      "name": "Deal Action",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "deal-action"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first();\nconst json = (input.json && typeof input.json === 'object') ? { ...input.json } : {};\nconst bags = [input.headers, json.headers, json.header];\ntry { bags.push($('Deal Action').item.headers); } catch (e) {}\nlet provided = '';\nfor (const bag of bags) {\n  if (!bag || typeof bag !== 'object') continue;\n  for (const [k, v] of Object.entries(bag)) {\n    if (String(k).toLowerCase() === 'x-internal-api-key') {\n      provided = Array.isArray(v) ? String(v[0] || '') : String(v || '');\n    }\n  }\n}\nif (!provided) provided = String(json.internal_api_key || '');\nconst expected = String($env.INTERNAL_API_KEY || '');\njson._auth_ok = Boolean(expected) && provided.trim() === expected.trim();\nreturn [{ json }];"
+      },
+      "id": "check-auth",
+      "name": "Check Auth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json._auth_ok}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "auth-ok",
+      "name": "Auth OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, action: $json.action, deal_id: $json.deal_id }) }}"
+      },
+      "id": "respond-action",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: 'unauthorized' }) }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "respond-unauth",
+      "name": "Respond Unauthorized",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 420]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$json.from_email}}",
+        "subject": "={{$json.subject || 'Re: your collaboration'}}",
+        "message": "={{$json.ai_reply}}",
+        "emailType": "text",
+        "options": {}
+      },
+      "id": "gmail-close",
+      "name": "Gmail Send Closing",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [880, 200],
+      "continueOnFail": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "8KCxPfpiIW8Mx4E0",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8000/api/emails/ingest/",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Internal-API-Key", "value": "={{$env.INTERNAL_API_KEY}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { thread_id: $('Check Auth').item.json.thread_id, subject: $('Check Auth').item.json.subject, body: $('Check Auth').item.json.ai_reply, from_email: 'creator@local', to_email: $('Check Auth').item.json.from_email, direction: 'OUTGOING', gmail_message_id: $('Check Auth').item.json.idempotency_key, idempotency_key: $('Check Auth').item.json.idempotency_key } }}",
+        "options": { "timeout": 60000 }
+      },
+      "id": "persist-close",
+      "name": "Persist Outgoing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, 200],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Deal Action": {
+      "main": [[{ "node": "Check Auth", "type": "main", "index": 0 }]]
+    },
+    "Check Auth": {
+      "main": [[{ "node": "Auth OK", "type": "main", "index": 0 }]]
+    },
+    "Auth OK": {
+      "main": [
+        [{ "node": "Respond OK", "type": "main", "index": 0 }],
+        [{ "node": "Respond Unauthorized", "type": "main", "index": 0 }]
+      ]
+    },
+    "Respond OK": {
+      "main": [[{ "node": "Gmail Send Closing", "type": "main", "index": 0 }]]
+    },
+    "Gmail Send Closing": {
+      "main": [[{ "node": "Persist Outgoing", "type": "main", "index": 0 }]]
+    }
+  }
+}
